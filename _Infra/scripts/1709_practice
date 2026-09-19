@@ -1,0 +1,28 @@
+--ddl
+create table solders(
+name text, 
+rank text
+);
+
+create table ranks(
+	id int,
+	name text
+);
+
+alter table solders add rank_id int;
+alter table solders add solder_id int;
+
+insert into solders
+values ('Иван', rank )
+
+select * from solders;
+-- select * from ranks;
+
+rank_id is not null
+	select * from solders, ranks
+	where solders.runk_id = ranks.id
+
+rank_id is not null
+	select solders.name || ' - ' || ranks.name::text as full_name from solders, ranks
+	where solders.runk_id = ranks.id
+	
