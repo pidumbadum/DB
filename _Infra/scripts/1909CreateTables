@@ -1,0 +1,70 @@
+create table if not exists positions(
+position_id int, position_name text);
+
+create table if not exists batches(
+batch_id int,
+batch_name text
+);
+
+create table if not exists users(
+user_id int,
+user_name text,
+user_lastname text,
+batch_id int,
+position_id int
+);
+
+create table if not exists parameters(
+measurement_date date,
+measurement_time time,
+equipment_id int,
+batch_id int, 
+station_level int, 
+temperature int,
+pressure int,
+wind_direction int,
+wind_speed int,
+bullet_drift_dist int
+);
+
+create table if not exists equipment_types(
+equipment_id int,
+temperture_devation int,
+pressure_devation int,
+wind_direction_devation int,
+wind_speed_devation int,
+bullet_drift_dist_devation int
+
+);
+
+insert into positions(position_id, position_name) values 
+(1, 'Стрелок'),
+(2, 'Сержант'),
+(3, 'Рядовой');
+
+insert into batches (batch_id, batch_name) values
+(1, 'Пачка №1'),
+(2, 'Пачка №2'),
+(3, 'Пачка №3');
+
+insert into users (user_id, user_name, user_lastname, batch_id, position_id) VALUES
+(1, 'Иван', 'Иванов', 1, 1),
+(2, 'Петр', 'Петров', 2, 2),
+(3, 'Павел', 'Сидоров', 3, 3);
+
+insert into equipment_types (equipment_id, temperture_devation, pressure_devation, wind_direction_devation, wind_speed_devation, bullet_drift_dist_devation) VALUES
+(1, 2, 5, 10, 3, 15),
+(2, 1, 3, 8, 2, 10),
+(3, 3, 7, 12, 4, 20);
+
+insert into parameters (measurement_date, measurement_time, equipment_id, batch_id, station_level, temperature, pressure, wind_direction, wind_speed, bullet_drift_dist) VALUES
+('2026-09-20', '10:30:00', 1, 1, 100, 25, 750, 180, 5, 12),
+('2026-09-20', '11:00:00', 2, 2, 150, 22, 755, 200, 7, 15),
+('2026-09-20', '11:30:00', 3, 3, 200, 28, 745, 160, 4, 10);
+
+SELECT *
+FROM batches b
+LEFT JOIN parameters par ON par.batch_id = b.batch_id
+LEFT JOIN users u ON u.batch_id = b.batch_id
+LEFT JOIN positions p ON u.position_id = p.position_id
+LEFT JOIN equipment_types et ON par.equipment_id = et.equipment_id;
