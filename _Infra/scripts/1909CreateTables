@@ -6,29 +6,13 @@ DROP TABLE IF EXISTS equipment_types;
 
 --Позиции
 create table if not exists positions(
-position_id int, position_name text);
-
---Пачки
-create table if not exists batches(
-batch_id int,
-batch_name text
-);
-
---Пользователи
-create table if not exists users(
-user_id int,
-user_name text,
-user_lastname text,
-batch_id int,
-position_id int
-);
+position_id int primary key, position_name text);
 
 --Параметры
 create table if not exists parameters(
-measurement_date date,
-measurement_time time,
+parameter_id int primary key, 
+measurement_date_time timestamp,
 equipment_id int,
-batch_id int, 
 station_level int, 
 temperature int,
 pressure int,
@@ -39,13 +23,33 @@ bullet_drift_dist int
 
 --Типы оборудования
 create table if not exists equipment_types(
-equipment_id int,
+equipment_id int primary key,
 temperture_devation int,
 pressure_devation int,
 wind_direction_devation int,
 wind_speed_devation int,
 bullet_drift_dist_devation int
 
+);
+
+--Пользователи
+create table if not exists users(
+user_id int primary key,
+user_name text,
+user_lastname text,
+batch text,
+position_id int
+);
+
+--Пачки
+CREATE TABLE batches (
+    batche_id int PRIMARY KEY,
+    batch_number int,
+    user_id int references users (user_id),
+    equipment_id int references equipment_types (equipment_id),
+    parameter_id int references parameters (parameter_id),
+    param_value decimal,
+  	date_time timestamp
 );
 
 --ДОБАВЛЕНИЕ ЗНАЧЕНИЙ
