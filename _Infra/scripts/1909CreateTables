@@ -1,4 +1,8 @@
-
+DROP TABLE IF EXISTS positions;
+DROP TABLE IF EXISTS batches;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS parameters;
+DROP TABLE IF EXISTS equipment_types;
 
 --Позиции
 create table if not exists positions(
