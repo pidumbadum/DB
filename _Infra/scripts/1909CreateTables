@@ -1,3 +1,9 @@
+drop table if exists units_measurement;
+drop table if exists params_types;
+drop table if exists employee;
+drop table if exists measurment_input_params;
+drop table if exists measurment_batches;
+
 DROP TABLE IF EXISTS positions;
 DROP TABLE IF EXISTS batches;
 DROP TABLE IF EXISTS users;
@@ -16,7 +22,7 @@ equipment_id int,
 station_level int, 
 temperature int,
 pressure int,
-wind_direction int,
+wind_direction int, 
 wind_speed int,
 bullet_drift_dist int
 );
