@@ -1,0 +1,171 @@
+--МИГРАЦИОННЫЙ СКРИПТ 2
+--запускать только после первого скрипта
+-----------------------------------------------------
+
+drop table if exists units_measurement;
+drop table if exists params_types;
+drop table if exists employee;
+drop table if exists measurment_input_params;
+drop table if exists measurment_batches;
+
+
+
+-- СОЗДАНИЕ НОВЫХ ТАБЛИЦ
+-------------------------------------------------------
+
+--1. Таблица едениц измерений
+create table if not exists units_measurement(
+	id int primary key, 
+	measurement_name text
+);
+
+insert into units_measurement(id, measurement_name) values 
+(1, 'метры (м)'),
+(2, 'градусы Цельсия (°C)'),
+(3, 'гектопаскали (гПа / hPa)'),
+(4, 'градусы от истинного севера (°)'),
+(5, 'метры в секунду (м/с)');
+
+-- comment on table units_measurement is 'Справочник едениц измерения';
+-- comment on table units_measurement.id is 'Уникальное значение';
+-- comment on table units_measurement.measurement_name is 'Название еденицы измерения';
+
+-- 2 Таблица Типов параметров
+create table if not exists params_types(
+	id int, 
+	param_name text,
+	id_units_measurement int
+);
+
+insert into params_types(id, param_name, id_units_measurement) values
+(1, 'Высота', 1),
+(2, 'Темпратура', 2),
+(3, 'Давление', 3),
+(4, 'Направление ветра', 4),
+(5, 'Скорость ветра', 5);
+
+-- СОЗДАНИЕ НОВЫХ ТАБЛИЦ ДЛЯ МИГРАЦИИ
+-- позиции и типы оборудования остаются неизменными 
+-------------------------------------------------------
+
+--3. входящие параметры
+create table if not exists measurment_input_params
+(
+    id integer,
+	measurment_bath_id integer,
+	id_param_type int,
+	param_value decimal(10,2)
+);
+
+-- 4. Пользователи
+create table if not exists employee(
+    id int PRIMARY KEY,
+    name character varying(255),
+    military_rank_id int references positions(position_id)
+);
+-- 5. Логи
+create table if not exists measurment_batches
+(
+	id integer primary key,
+	user_id integer,
+	equipment_type_id integer,
+	started timestamp default now()
+);
+
+-- МИГРАЦИЯ ДАННЫХ
+-----------------------------------------
+
+-- Заполнение пользователей
+insert into employee(id, name, military_rank_id)
+select user_id, user_name || ' ' || user_lastname, position_id
+from users;
+
+-- Заполнение логов 
+insert into measurment_batches (id, user_id, equipment_type_id)
+select batche_id, user_id, equipment_id
+from batches;
+
+-- Заполнение новых входных параметров
+create temporary table old_param as select * from parameters;
+
+-- высота
+insert into measurment_input_params(id, measurment_bath_id, id_param_type, param_value) 
+select 
+	parameter_id, 
+	parameter_id, 
+	1, 
+	station_level
+from old_param;
+
+-- температура
+insert into measurment_input_params(id, measurment_bath_id, id_param_type, param_value) 
+select 
+	parameter_id + 100, 
+	parameter_id, 
+	2, 
+	temperature
+from old_param;
+
+-- давление 
+insert into measurment_input_params(id, measurment_bath_id, id_param_type, param_value) 
+select 
+	parameter_id + 200, 
+	parameter_id, 
+	3, 
+	pressure
+from old_param;
+
+-- Направление ветра 
+insert into measurment_input_params(id, measurment_bath_id, id_param_type, param_value) 
+select 
+	parameter_id + 300, 
+	parameter_id, 
+	4, 
+	wind_direction
+from old_param;
+
+-- Скорость ветра
+insert into measurment_input_params(id, measurment_bath_id, id_param_type, param_value) 
+select 
+	parameter_id + 400, 
+	parameter_id, 
+	5, 
+	wind_speed
+from old_param;
+
+--УДАЛЕНИЕ НЕ НУЖНЫХ ТАБЛИЦ
+---------------------------------------------
+drop table if exists batches;
+drop table if exists parameters;
+drop table if exists users;
+drop table if exists old_param;
+
+
+--Запрос
+SELECT 
+    mb.started AS "Дата измерения",
+    mb.id AS "Номер пачки",
+    e.name AS "ФИО сотрудника",
+    pt.param_name || ' (' || um.measurement_name || ')' AS "Наименование параметра и ед. измерения",
+    mip.param_value AS "Значение"
+FROM measurment_batches mb, 
+     measurment_input_params mip, 
+     equipment_types et, 
+     employee e, 
+     positions mr, 
+     units_measurement um, 
+     params_types pt
+WHERE
+    -- Связь пачка - сотрудник
+    e.id = mb.user_id
+    -- Связь должность - сотрудник
+    AND e.military_rank_id = mr.position_id
+    -- Связь пачка - тип оборудования
+    AND et.equipment_id = mb.equipment_type_id
+    -- Связь пачка - параметры
+    AND mip.measurment_bath_id = mb.id
+    -- Связь параметр - тип параметра
+    AND mip.id_param_type = pt.id
+    -- Связь тип параметра - единица измерения
+    AND pt.id_units_measurement = um.id
+ORDER BY mb.started, mb.id, pt.id;
