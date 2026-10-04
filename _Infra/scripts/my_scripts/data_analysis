@@ -37,3 +37,143 @@ from grouped_data gd
     cross join avg_data a
 where gd.user_count_batch <> a.avg_count
 order by gd.user_count_batch;
+
+--АНАЛИЗ ДАННЫХ ЧЕРЕЗ ЗАПРОСЫ
+---------------------------------------------
+
+-- select user_id, count(user_id) as user_count_batch
+-- from public.measurment_batches
+-- group by user_id;
+
+-- подзапрос 2:
+-- with groped_data as (
+-- 	select user_id, count(user_id) as user_count_batch
+-- 	from public.measurment_batches
+-- 	group by user_id
+-- )
+-- select user_count_batch from groped_data
+-- where user_count_batch = ( select max(user_count_batch) from groped_data); ---------> Находим количество измерений, которое совпадает наибольшее количество раз
+
+-- ЗАПРОС 1: ВЫВОД ПОЛЬЗОВАТЕЛЕЙ С отклонением от среднего 
+---------------------------------------------------------------------------
+with grouped_data as (
+    select 
+        user_id, 
+        count(user_id) as user_count_batch
+    from public.measurment_batches
+    group by user_id
+),
+avg_data as (
+    select floor(avg(user_count_batch)) as avg_count from grouped_data
+)
+select 
+    gd.user_id,
+    e.name as "фио сотрудника",
+    gd.user_count_batch as "количество пачек",
+	a.avg_count as "среднее",
+    gd.user_count_batch - a.avg_count as "отклонение от среднего"
+from grouped_data gd
+    inner join employee e on e.id = gd.user_id
+    cross join avg_data a
+where gd.user_count_batch <> a.avg_count
+order by gd.user_count_batch;
+
+
+-- ЗАПРОС 2: ПОИСК ПУСТЫХ ПАЧЕК ИЗМЕРЕНИЙ
+---------------------------------------------------------
+
+select 
+    mb.id as "номер пачки",
+    mb.started as "дата измерения",
+    e.name as "фио сотрудника"
+from public.measurment_batches mb
+    inner join employee e on e.id = mb.user_id
+    left join public.measurment_input_params mip on mip.measurment_bath_id = mb.id
+where mip.id is null
+order by mb.id;
+
+
+-- ЗАПРОС 3: ПАЧКИ С НЕПОЛНЫМ НАБОРОМ ПАРАМЕТРОВ (не 5 штук)
+-------------------------------------------------------------------
+
+with batch_params as (
+    select 
+        measurment_bath_id,
+        count(*) as param_count
+    from public.measurment_input_params
+    group by measurment_bath_id
+)
+select 
+    mb.id as "номер пачки",
+    mb.started as "дата измерения",
+    e.name as "фио сотрудника",
+    coalesce(bp.param_count, 0) as "количество параметров",
+    case 
+        when coalesce(bp.param_count, 0) < 5 then 'неполная пачка'
+        when coalesce(bp.param_count, 0) > 5 then 'есть дубли'
+        else 'ok'
+    end as "статус"
+from public.measurment_batches mb
+    inner join employee e on e.id = mb.user_id
+    left join batch_params bp on bp.measurment_bath_id = mb.id
+where coalesce(bp.param_count, 0) <> 5
+order by mb.id;
+
+
+-- ЗАПРОС 4: ЗНАЧЕНИЯ ВНЕ ДОПУСТИМЫХ ДИАПАЗОНОВ
+-------------------------------------------------
+
+select 
+    mip.measurment_bath_id as "номер пачки",
+    mb.started as "дата измерения",
+    e.name as "фио сотрудника",
+    pt.param_name as "параметр",
+    um.measurement_name as "единица измерения",
+    mip.param_value as "значение",
+    case 
+        when pt.id = 1 and (mip.param_value < 0 or mip.param_value > 5000) 
+            then 'вне диапазона 0-5000'
+        when pt.id = 2 and (mip.param_value < -60 or mip.param_value > 60) 
+            then 'вне диапазона -60..+60'
+        when pt.id = 3 and (mip.param_value < 870 or mip.param_value > 1084) 
+            then 'вне диапазона 870-1084'
+        when pt.id = 4 and (mip.param_value < 0 or mip.param_value > 360) 
+            then 'вне диапазона 0-360'
+        when pt.id = 5 and (mip.param_value < 0 or mip.param_value > 113) 
+            then 'вне диапазона 0-113'
+        else 'ok'
+    end as "проблема"
+from public.measurment_input_params mip
+    inner join public.measurment_batches mb on mb.id = mip.measurment_bath_id
+    inner join employee e on e.id = mb.user_id
+    inner join public.params_types pt on pt.id = mip.id_param_type
+    inner join public.units_measurement um on um.id = pt.id_units_measurement
+where 
+       (pt.id = 1 and (mip.param_value < 0 or mip.param_value > 5000))
+    or (pt.id = 2 and (mip.param_value < -60 or mip.param_value > 60))
+    or (pt.id = 3 and (mip.param_value < 870 or mip.param_value > 1084))
+    or (pt.id = 4 and (mip.param_value < 0 or mip.param_value > 360))
+    or (pt.id = 5 and (mip.param_value < 0 or mip.param_value > 113))
+order by mip.measurment_bath_id, pt.id;
+
+
+-- ЗАПРОС 5: ПРОВЕРКА КОРРЕКТНОСТИ ЕДИНИЦ ИЗМЕРЕНИЯ ДЛЯ ПАРАМЕТРОВ
+---------------------------------------------------------------------------
+
+select 
+    in_p.id_param_type as "код параметра",
+    pt.param_name as "параметр",
+    um.id as "код единицы",
+    um.measurement_name as "единица измерения",
+    case 
+        when in_p.id_param_type = 1 and um.id = 1 then 'ok'
+        when in_p.id_param_type = 2 and um.id = 2 then 'ok'
+        when in_p.id_param_type = 3 and um.id = 3 then 'ok'
+        when in_p.id_param_type = 4 and um.id = 4 then 'ok'
+        when in_p.id_param_type = 5 and um.id = 5 then 'ok'
+        else 'несоответствие'
+    end as "статус"
+from public.params_types pt
+    inner join public.units_measurement um on um.id = pt.id_units_measurement
+	join public.measurment_input_params in_p on in_p.id_param_type = pt.id 
+order by pt.id;
