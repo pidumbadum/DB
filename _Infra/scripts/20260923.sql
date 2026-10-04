@@ -5,12 +5,6 @@ drop table if exists employees;
 drop table if exists measurment_types;
 drop table if exists measurment_input_params;
 drop table if exists measurment_baths;
-drop table if exists public.batches;
-drop table if exists public.equipment_types;
-drop table if exists public.parameters;
-drop table if exists public.positions;
-drop table if exists public.users;
-
 
 -- 1. Справочник должностей
 create table military_ranks
@@ -65,59 +59,31 @@ values(1, 'ДМК', 'Десантный метео комплекс'),
 (2,'ВР','Ветровое ружье');
 
 
---2.5 Таблица едениц измерений
-create table if not exists units_measurement(
-	id int, 
-	measurement_name text
-);
-
-insert into units_measurement(id, measurement_name) values 
-(1, 'метры (м)'),
-(2, 'градусы Цельсия (°C)'),
-(3, 'гектопаскали (гПа / hPa)'),
-(4, 'градусы от истинного севера (°)'),
-(5, 'метры в секунду (м/с)')
-;
-
---2.5 Таблица Типов параметров
-create table if not exists params_types(
-	id int, 
-	param_name text,
-	id_units_measurement int
-);
-
-insert into params_types(id, param_name, id_units_measurement) values
-(1, 'Высота', 1),
-(2, 'Темпратура', 2),
-(3, 'Давление', 3),
-(4, 'Направление ветра', 4),
-(5, 'Скорость ветра', 5);
-
 -- 3. Таблица с параметрами
 create table measurment_input_params
 (
     id integer,
 	measurment_bath_id integer,
-	id_param_type int,
-	param_value int
+	height numeric(8,2) default 0,
+	temperature numeric(8,2) default 0,
+	pressure numeric(8,2) default 0,
+	wind_direction numeric(8,2) default 0,
+	wind_speed numeric(8,2) default 0
 );
 
 comment on table measurment_input_params is 'Таблица с параметрами';
 comment on column measurment_input_params.id is 'Уникальный код';
 comment on column measurment_input_params.measurment_bath_id is 'Уникальный код пачки';
--- comment on column measurment_input_params.height is 'Высота';
--- comment on column measurment_input_params.temperature is 'Температура';
--- comment on column measurment_input_params.pressure is 'Давление';
--- comment on column measurment_input_params.wind_direction is 'Направление ветка';
--- comment on column measurment_input_params.wind_speed is 'Скорость ветра';
+comment on column measurment_input_params.height is 'Высота';
+comment on column measurment_input_params.temperature is 'Температура';
+comment on column measurment_input_params.pressure is 'Давление';
+comment on column measurment_input_params.wind_direction is 'Направление ветка';
+comment on column measurment_input_params.wind_speed is 'Скорость ветра';
 
 -- Заполняем данные
-insert into measurment_input_params(id, measurment_bath_id, id_param_type,  param_value)
-values(1, 1, 1, 100),
-(1, 1, 2, 15),
-(1, 1, 3, 30),
-(1, 1, 4, 20),
-(1, 1, 5, 4);
+insert into measurment_input_params(id, measurment_bath_id, height, temperature, pressure, wind_direction,wind_speed )
+values(1, 1, 100,12,34,0.2,45);
+
 
 
 -- 4. Таблица с историей
@@ -143,7 +109,7 @@ values(1, 1, 1, '2026-09-01'),(2,1,2, '2026-09-02');
 ---------------------------------------------------
 
 select *
-from measurment_baths, measurment_input_params, measurment_types, employees, military_ranks, units_measurement, params_types
+from measurment_baths, measurment_input_params, measurment_types, employees, military_ranks
 where
         -- Связь пачка - пользователи
 	    employees.id = measurment_baths.emploee_id
@@ -152,7 +118,13 @@ where
 	   -- Связь пачка - тип оборудования
 	and measurment_types.id = measurment_baths.measurment_type_id
 	   -- Связь пачка - параетры
-	and measurment_input_params.measurment_bath_id = measurment_baths.id
-		-- связь параметр - тип параметра
-	and measurment_input_params.id_param_type = params_types.id
-	and params_types.id_units_measurement = units_measurement.id;
+	and measurment_input_params.measurment_bath_id = measurment_baths.id;
+	
+
+
+
+
+
+
+
+

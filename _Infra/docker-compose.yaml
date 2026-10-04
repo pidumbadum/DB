@@ -1,8 +1,12 @@
+<<<<<<< HEAD
 version: "3.0"
+=======
+>>>>>>> upstream/master
 services:
   # https://hub.docker.com/_/postgres
 
   postgres:
+<<<<<<< HEAD
     user: root
     image: postgres:16.3
     container_name: "postgres"
@@ -10,12 +14,21 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_USER: ${POSTGRES_USER}
+=======
+    image: postgres:16.3
+    container_name: "postgres"
+    environment:
+      POSTGRES_DB: ${POSTGRESQL_DB}
+      POSTGRES_PASSWORD: ${POSTGRESQL_PASSWORD}
+      POSTGRES_USER: ${POSTGRESQL_USER}
+>>>>>>> upstream/master
     ports:
      - 15435:5432
     networks:
      - pgdata
 
   pgadmin:
+<<<<<<< HEAD
     user: root
     container_name: "pgadmin"
     image: dpage/pgadmin4
@@ -28,6 +41,19 @@ services:
     volumes:
       - ./pgadmin:/var/lib/pgadmin  
       - ./scripts:/scripts    
+=======
+    container_name: "pgadmin"
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - 5050:80
+    volumes:
+      - ./pgadmin:/var/lib/pgadmin  
+      - ./scripts:/scripts 
+>>>>>>> upstream/master
     networks:
       - pgdata  
     restart: always
