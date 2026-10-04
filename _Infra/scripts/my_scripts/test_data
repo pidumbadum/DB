@@ -137,7 +137,7 @@ INSERT INTO measurment_input_params (id, measurment_bath_id, id_param_type, para
 (318, 18, 4, 330),
 (418, 18, 5, 150);
 
--- ПОЛЬЗОВАТЕЛЬ 3: Павел Сидоров 12/10
+-- ПОЛЬЗОВАТЕЛЬ 3: Павел Сидоров 10/10
 ----------------------------------------
 
 INSERT INTO measurment_batches (id, user_id, equipment_type_id, started) VALUES
@@ -150,9 +150,7 @@ INSERT INTO measurment_batches (id, user_id, equipment_type_id, started) VALUES
 (27, 3, 3, '2026-09-22 16:00:00'),
 (28, 3, 3, '2026-09-22 17:00:00'),
 (29, 3, 3, '2026-09-22 18:00:00'),
-(30, 3, 3, '2026-09-22 19:00:00'),
-(31, 3, 3, '2026-09-22 20:00:00'),
-(32, 3, 3, '2026-09-22 21:00:00');
+(30, 3, 3, '2026-09-22 19:00:00');
 
 -- Параметры для пользователя 3 (с ошибками)
 INSERT INTO measurment_input_params (id, measurment_bath_id, id_param_type, param_value) VALUES
@@ -213,15 +211,4 @@ INSERT INTO measurment_input_params (id, measurment_bath_id, id_param_type, para
 (130, 30, 2, 17),
 (230, 30, 3, 763),
 (330, 30, 4, 300),
-(430, 30, 5, 10),
- 
-(32, 32, 1, 200),
-(131, 32, 2, 21),
-(231, 32, 3, 757),
-(331, 32, 4, 15),
-
-(18, 18, 1, 310),
-(118, 18, 2, 5),
-(218, 18, 3, 738),
-(318, 18, 4, 330),
-(418, 18, 5, 150);
+(430, 30, 5, 10);

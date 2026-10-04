@@ -1,0 +1,39 @@
+--АНАЛИЗ ДАННЫХ ЧЕРЕЗ АЗПРОСЫ
+---------------------------------------------
+
+-- select user_id, count(user_id) as user_count_batch
+-- from public.measurment_batches
+-- group by user_id;
+
+-- подзапрос 2:
+-- with groped_data as (
+-- 	select user_id, count(user_id) as user_count_batch
+-- 	from public.measurment_batches
+-- 	group by user_id
+-- )
+-- select user_count_batch from groped_data
+-- where user_count_batch = ( select max(user_count_batch) from groped_data); ---------> Находим количество измерений, которое совпадает наибольшее количество раз
+
+-- ЗАПРОС 1: ВЫВОД РОЛЬЗОВАТЕЛЕЙ С отклонением от среднего 
+---------------------------------------------------------------------------
+with grouped_data as (
+    select 
+        user_id, 
+        count(user_id) as user_count_batch
+    from public.measurment_batches
+    group by user_id
+),
+avg_data as (
+    select floor(avg(user_count_batch)) as avg_count from grouped_data
+)
+select 
+    gd.user_id,
+    e.name as "фио сотрудника",
+    gd.user_count_batch as "количество пачек",
+	a.avg_count as "среднее",
+    gd.user_count_batch - a.avg_count as "отклонение от среднего"
+from grouped_data gd
+    inner join employee e on e.id = gd.user_id
+    cross join avg_data a
+where gd.user_count_batch <> a.avg_count
+order by gd.user_count_batch;
