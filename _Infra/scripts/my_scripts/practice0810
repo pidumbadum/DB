@@ -1,0 +1,41 @@
+-- select * from public.employee;
+
+-- create sequence seq_e;
+
+-- select nextval ('public.employee');
+
+-- alter table public.employee
+-- alter column id set default nextval ('public.seq_e');
+
+-- -- select max(id) from employee;
+
+-- insert into employee (name, military_rank_id) 
+-- values ('test', 1);
+
+-- select * from employee;
+
+-- --СОздание для таблицы public.equipment_types
+
+-- select max(equipment_id) from public.equipment_types;
+
+-- create sequence seq_eqt if not exists start with 4; 
+-- alter table public.equipment_types
+-- alter column id set default nextval ('public.seq_eqt');
+-- insert into public.equipment_types (name, military_rank_id) 
+-- values ('test', 1);
+
+select * from public.measurment_batches;
+
+--установление ограничений в существующую талицу 
+ALTER TABLE public.measurment_batches
+ADD CONSTRAINT not_null CHECK (user_id is not Null);
+
+--попытка добавить готовую данные после проверки 
+do $$
+begin
+	insert into public.measurment_batches(id, user_id, equipment_type_id) 
+	values (100, 1, 1), (110, 2, 2);
+	commit;
+	insert into public.measurment_batches(id, user_id, equipment_type_id) 
+	values (200, null, 1), (210, 0, 2);
+end $$;
