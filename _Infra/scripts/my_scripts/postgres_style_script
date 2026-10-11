@@ -1,0 +1,266 @@
+-- ИСПОЛЬЗОВАНИЕ pgSql
+--------------------------------------------------
+do $$
+
+begin 
+	-- 1. СОздание счеттчиков и структура таблицы
+	-----------------------------------------------
+	
+	--сетчики
+	create sequence if not exists seq_units_m start 1; 
+	create sequence if not exists seq_params_types start 1;
+	create sequence if not exists seq_input_p start 1; 
+	create sequence if not exists seq_employee start 1;
+	create sequence if not exists seq_logs start 1; 
+	create sequence if not exists seq_ranks start 1;
+	create sequence if not exists seq_equipment_types start 1; 
+
+	--таблицы
+	 -- Таблица: positions (Должности/звания)
+    create table if not exists positions (
+        position_id int primary key default nextval('seq_ranks'),
+        position_name text
+    );
+
+    -- Таблица: equipment_types (Типы оборудования)
+    create table if not exists equipment_types (
+        equipment_id int primary key default nextval('seq_equipment_types'),
+        temperture_devation int,
+        pressure_devation int,
+        wind_direction_devation int,
+        wind_speed_devation int,
+        bullet_drift_dist_devation int
+    );
+
+    -- Таблица: units_measurement (Единицы измерения)
+    create table if not exists units_measurement (
+        id int primary key default nextval('seq_units_m'),
+        measurement_name text
+    );
+
+    -- Таблица: params_types (Типы параметров)
+    create table if not exists params_types (
+        id int primary key default nextval('seq_params_types'),
+        param_name text,
+        id_units_measurement int
+    );
+
+    -- Таблица: employee (Сотрудники)
+    create table if not exists employee (
+        id int primary key default nextval('seq_employee'),
+        name varchar(255),
+        military_rank_id int
+    );
+
+    -- Таблица: measurment_batches (Пачки измерений)
+    create table if not exists logs (
+        id int primary key default nextval('seq_logs'),
+        user_id int,
+        equipment_type_id int,
+        started timestamp default now()
+    );
+
+    -- Таблица: measurment_input_params (Входящие параметры измерений)
+    create table if not exists measurment_input_params (
+        id int primary key default nextval('seq_input_p'),
+        measurment_bath_id int,
+        id_param_type int,
+        param_value decimal(10, 2)
+    );
+	raise notice 'Таблицы созданы';
+	commit;
+
+	-- 2. Наполнение тестовыми данными
+	-----------------------------------------------
+	
+	-- Справочник должностей/званий
+	insert into positions (position_name) values 
+	('Стрелок'),
+	('Сержант'),
+	('Лейтенант'),
+	('Капитан');
+	
+	-- Типы оборудования с допусками отклонений
+	insert into equipment_types (
+	    temperture_devation, 
+	    pressure_devation, 
+	    wind_direction_devation, 
+	    wind_speed_devation, 
+	    bullet_drift_dist_devation) values 
+	(2, 5, 10, 3, 15),
+	(1, 3, 8, 2, 10),
+	(3, 7, 12, 4, 20);
+	
+	-- Единицы измерения
+	insert into units_measurement (measurement_name) values 
+	('метры (м)'),
+	('градусы Цельсия (°C)'),
+	('гектопаскали (гПа)'),
+	('градусы от истинного севера (°)'),
+	('метры в секунду (м/с)');
+	
+	-- Типы параметров (с привязкой к единицам измерения)
+	-- id_units_measurement: 1=метры, 2=°C, 3=гПа, 4=градусы, 5=м/с
+	insert into params_types (param_name, id_units_measurement) values 
+	('Высота', 1),
+	('Температура', 2),
+	('Давление', 3),
+	('Направление ветра', 4),
+	('Скорость ветра', 5);
+	
+	-- Сотрудники (с привязкой к должностям)
+	-- military_rank_id: 1=Стрелок, 2=Сержант, 3=Лейтенант, 4=Капитан
+	insert into employee (name, military_rank_id) values 
+	('Иванов Иван Иванович', 2),
+	('Петров Петр Петрович', 3),
+	('Сидоров Павел Сергеевич', 1),
+	('Волков Александр Сергеевич', 4);
+	
+	-- Пачки измерений (logs)
+	-- user_id: 1=Иванов, 2=Петров, 3=Сидоров, 4=Волков
+	-- equipment_type_id: 1, 2, 3
+	insert into logs (user_id, equipment_type_id, started) values 
+	(1, 1, '2026-10-11 08:00:00'),
+	(1, 1, '2026-10-11 09:00:00'),
+	(1, 1, '2026-10-11 10:00:00'),
+	(2, 2, '2026-10-11 08:30:00'),
+	(2, 2, '2026-10-11 09:30:00'),
+	(3, 3, '2026-10-11 11:00:00'),
+	(4, 1, '2026-10-11 12:00:00');
+	
+	-- Входные параметры измерений
+	-- Пачка 1 (logs.id=1): полный набор параметров
+	insert into measurment_input_params (measurment_bath_id, id_param_type, param_value) values 
+	(1, 1, 150.00),     -- высота 150 м
+	(1, 2, 22.50),      -- температура 22.5 °C
+	(1, 3, 755.00),     -- давление 755 гПа
+	(1, 4, 180.00),     -- направление ветра 180°
+	(1, 5, 5.20);       -- скорость ветра 5.2 м/с
+	
+	-- Пачка 2 (logs.id=2): полный набор
+	insert into measurment_input_params (measurment_bath_id, id_param_type, param_value) values 
+	(2, 1, 200.00),
+	(2, 2, 18.00),
+	(2, 3, 760.00),
+	(2, 4, 270.00),
+	(2, 5, 8.50);
+	
+	-- Пачка 3 (logs.id=3): полный набор
+	insert into measurment_input_params (measurment_bath_id, id_param_type, param_value) values 
+	(3, 1, 180.00),
+	(3, 2, 25.00),
+	(3, 3, 750.00),
+	(3, 4, 90.00),
+	(3, 5, 3.10);
+	
+	-- Пачка 4 (logs.id=4): полный набор
+	insert into measurment_input_params (measurment_bath_id, id_param_type, param_value) values 
+	(4, 1, 220.00),
+	(4, 2, 20.00),
+	(4, 3, 758.00),
+	(4, 4, 45.00),
+	(4, 5, 6.00);
+	
+	-- Пачка 5 (logs.id=5): полный набор
+	insert into measurment_input_params (measurment_bath_id, id_param_type, param_value) values 
+	(5, 1, 160.00),
+	(5, 2, 24.00),
+	(5, 3, 752.00),
+	(5, 4, 315.00),
+	(5, 5, 4.50);
+	
+	-- Пачка 6 (logs.id=6): полный набор
+	insert into measurment_input_params (measurment_bath_id, id_param_type, param_value) values 
+	(6, 1, 190.00),
+	(6, 2, 21.00),
+	(6, 3, 757.00),
+	(6, 4, 135.00),
+	(6, 5, 7.00);
+	
+	-- Пачка 7 (logs.id=7): полный набор
+	insert into measurment_input_params (measurment_bath_id, id_param_type, param_value) values 
+	(7, 1, 210.00),
+	(7, 2, 19.00),
+	(7, 3, 761.00),
+	(7, 4, 225.00),
+	(7, 5, 9.00);
+	
+	raise notice 'Тестовые данные добавлены';
+	commit;
+
+	-- 3.СОздание связей между таблицами и ограничений
+	-----------------------------------------------
+
+	-- ALTER TABLE public.params_types DROP CONSTRAINT fk_param_unit;
+
+	-- params_types -> units_measurement
+	alter table public.params_types 
+		add constraint fk_param_unit
+		foreign key (id_units_measurement)
+		references public.units_measurement(id);
+	
+	-- measurment_input_params -. params_types (параметр имеет тип)
+	alter table public.measurment_input_params 
+		add constraint fk_input_pt
+		foreign key (id_param_type)
+		references public.params_types(id);
+
+	-- employee -> positions (сотрудник имеет должность)
+	alter table public.employee 
+		add constraint fk_employee_position
+		foreign key (military_rank_id)
+		references public.positions(position_id);
+	
+	-- logs -> employee (пачка проведена сотрудником)
+	alter table public.logs 
+		add constraint fk_log_employee
+		foreign key (user_id)
+		references public.employee(id);
+	
+	-- logs -> equipment_types (пачка проведена на оборудовании)
+	alter table public.logs 
+		add constraint fk_log_equipment
+		foreign key (equipment_type_id)
+		references public.equipment_types(equipment_id);
+	
+	-- measurment_input_params -> logs (параметр принадлежит пачке)
+	alter table public.measurment_input_params 
+		add constraint fk_param_log
+		foreign key (measurment_bath_id)
+		references public.logs(id);
+
+	-- ОГРАНИЧЕНИЯ
+	----------------------------------
+	
+	-- Значение параметра не может быть слишком экстремальным
+	alter table public.measurment_input_params 
+		add constraint chk_param_value
+		check (param_value between -100 and 10000);
+	
+	-- Название должности не должно быть пустым
+	alter table public.positions 
+		add constraint chk_position_name
+		check (position_name is not null and length(position_name) > 0);
+	
+	-- ФИО сотрудника не должно быть пустым
+	alter table public.employee 
+		add constraint chk_employee_name
+		check (name is not null and length(name) > 0);
+	
+	-- Допуски отклонений оборудования не могут быть отрицательными
+	alter table public.equipment_types 
+		add constraint chk_deviations_positive
+		check (
+			temperture_devation >= 0 
+			and pressure_devation >= 0 
+			and wind_direction_devation >= 0 
+			and wind_speed_devation >= 0 
+			and bullet_drift_dist_devation >= 0
+		);
+	
+	raise notice 'Связи добавлены и ограничения добавлены';
+	commit;
+
+-- exception 
+-- 	when others then raise notice 'ОШибка: %', sqlerrm;
+end $$ language plpgsql;
