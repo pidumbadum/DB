@@ -1,0 +1,35 @@
+--СОздание новой таблицы с температурой
+------------------------------------------
+
+do $$
+begin
+	-- создание таблицы 
+	create table if not exists temperature_deviation (
+        t0 text,
+        delta_t decimal(4, 1),
+        id_units_measurement int);
+
+	-- commit;
+
+    -- id_units_measurement = 2 (градусы Цельсия)
+    insert into temperature_deviation (t0, delta_t, id_units_measurement) values 
+    ('Ниже 0', 0.0, 2),
+    ('0 - 5', 0.5, 2),
+    ('10 - 15', 1.0, 2),
+    ('20', 1.5, 2),
+    ('25', 2.0, 2),
+    ('30', 3.5, 2),
+    ('40', 4.5, 2);
+
+	-- commit;
+
+	--Добавление связей
+    alter table public.temperature_deviation 
+        add constraint fk_temp_dev_unit
+        foreign key (id_units_measurement)
+        references public.units_measurement(id);
+	
+	
+end $$ language plpgsql;
+
+select * from temperature_deviation;
