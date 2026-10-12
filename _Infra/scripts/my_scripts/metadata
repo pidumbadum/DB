@@ -33,7 +33,10 @@ FROM (
         END AS "Тип"
     FROM information_schema.table_constraints
     WHERE table_schema = 'public' 
-      AND constraint_type IN ('FOREIGN KEY', 'CHECK')
-      AND constraint_name NOT LIKE '%not_null%' -- исключаем системный мусор
+	AND table_catalog = 'postgres'
+    AND constraint_type IN ('FOREIGN KEY', 'CHECK')
+    AND constraint_name NOT LIKE '%not_null%' -- исключаем системный мусор
 ) AS metadata
 ORDER BY "Тип", "Наименование";
+
+-- select current_database();
