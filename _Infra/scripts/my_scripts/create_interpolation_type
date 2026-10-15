@@ -1,0 +1,14 @@
+--Создание типы данных для интеполяции скриптом
+
+do $$
+begin
+	drop type if exists interpol_point;
+	create type interpol_point as
+	(
+		x0 decimal(8, 2),
+		y0 decimal(8, 2),
+		x1 decimal(8, 2),
+		y1 decimal(8, 2)
+		
+	);
+end $$;
