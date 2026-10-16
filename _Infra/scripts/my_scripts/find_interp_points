@@ -1,0 +1,30 @@
+--STRING_TO_TABLE(string, delimiter) превращает разделённую строку в отдельные строки таблицы.select 
+with input_temp as(
+	select -1 as var1
+),
+--запрос на вывод верхнего значения
+upper_point as (
+	select t0 as x1, delta_t as y1 from public.temperature_deviation 
+	cross join input_temp
+	where var1 <= t0
+	order by t0 asc
+	limit 1
+),
+--запрос на вывод нижнего значения
+less_point as (
+	select t0 as x0, delta_t as y0 from temperature_deviation 
+	cross join input_temp
+	where var1 >= t0
+	order by t0 desc
+	limit 1
+)
+select 
+	coalesce(x0, var1) as x0, 
+	coalesce(y0, (select delta_t from temperature_deviation order by t0 limit 1)) as y0,
+	(select coalesce(x1, var1) as x1),
+	(select coalesce(y1, (select delta_t from temperature_deviation order by t0 desc limit 1)) as y1)
+	from input_temp
+	left join less_point on true
+	left join upper_point on true
+
+;
