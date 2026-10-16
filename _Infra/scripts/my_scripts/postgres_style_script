@@ -331,18 +331,12 @@ commit;
 ------------------------------------------
 	-- создание таблицы 
 	create table if not exists temperature_deviation (
-        t0 text,
-        delta_t decimal(4, 1));
+        t0 numeric(8,2) not null primary key,
+        delta_t decimal(4, 1)  not null);
 
     -- id_units_measurement = 2 (градусы Цельсия)
     insert into temperature_deviation (t0, delta_t) values 
-    ('Ниже 0', 0.0),
-    ('0 - 5', 0.5),
-    ('10 - 15', 1.0),
-    ('20', 1.5),
-    ('25', 2.0),
-    ('30', 3.5),
-    ('40', 4.5);
+    (0, 0.5),(5, 0.5),(10, 1), (20,1.5), (25, 2), (30, 3.5), (40, 4.5);
 	
 
 -- exception 
