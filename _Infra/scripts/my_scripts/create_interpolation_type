@@ -14,7 +14,7 @@ begin
 	end;
 	commit;
 	
-	--СОЗДАНИЕ ФУНКЦИИ ИНТЕРПОЛЯЦИИ
+	--СОЗДАНИЕ ФУНКЦИИ ПОИСКА КРАЙНИХ ЗНАЧЕНИЙ
 	-----------------------------------------
 	begin
 	drop function if exists find_interpolation_params cascade;
@@ -49,6 +49,28 @@ begin
 			return res;
 		end;
 		$func$ language plpgsql;	
-	$create_func$; 
+		$create_func$;
 	end;
+	commit;
+
+	-- ФУНКЦИЯ РАСЧЕТ ИНТЕРПОЛЯЦИИ
+	begin
+    drop function if exists calculate_interpolation cascade;
+    
+    execute $create_func$
+        create function calculate_interpolation(x numeric, params interpol_point)
+        returns numeric(8,2) as $func$
+        begin
+            -- Защита от деления на ноль
+            if params.x0 = params.x1 then
+                return params.y0;
+            end if;
+            
+            -- Формула линейной интерполяции: y = y0 + (x - x0) * (y1 - y0) / (x1 - x0)
+            return params.y0 + (x - params.x0) * (params.y1 - params.y0) / (params.x1 - params.x0);
+    	end;     
+		$func$ language plpgsql;
+	$create_func$;
+	end;
+	
 end $do_block$;
