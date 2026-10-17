@@ -1,14 +1,54 @@
---Создание типы данных для интеполяции скриптом
-
-do $$
+do $do_block$
 begin
-	drop type if exists interpol_point;
-	create type interpol_point as
-	(
-		x0 decimal(8, 2),
-		y0 decimal(8, 2),
-		x1 decimal(8, 2),
-		y1 decimal(8, 2)
-		
-	);
-end $$;
+	-- CСОЗДАНИЕ ТИПА ДАННЫХ ДЛЯ ИНТЕРПОЛЯЦИИ 
+	------------------------------------
+	begin
+		drop type if exists interpol_point cascade;
+		create type interpol_point as
+		(
+			x0 decimal(8, 2),
+			y0 decimal(8, 2),
+			x1 decimal(8, 2),
+			y1 decimal(8, 2)		
+		);
+	end;
+	commit;
+	
+	--СОЗДАНИЕ ФУНКЦИИ ИНТЕРПОЛЯЦИИ
+	-----------------------------------------
+	begin
+	drop function if exists find_interpolation_params cascade;
+	execute $create_func$ 
+		create function find_interpolation_params(temp numeric) 
+		returns interpol_point as $func$
+		declare  
+			res interpol_point;
+		begin
+			with 
+			--запрос на вывод верхнего значения
+			upper_point as (
+				select t0, delta_t from public.temperature_deviation 
+				where temp <= t0
+				order by t0 asc
+				limit 1
+			),
+			--запрос на вывод нижнего значения
+			less_point as (
+				select t0, delta_t from temperature_deviation 
+				where temp >= t0
+				order by t0 desc
+				limit 1
+			)
+			--Основной запрос. ищет точки и помещает их в пременную res
+			select 
+				coalesce((select t0 from less_point), temp) as x0, 
+				coalesce((select delta_t from less_point), (select delta_t from temperature_deviation order by t0 limit 1)) as y0,
+				coalesce((select t0 from upper_point), temp) as x1,
+				coalesce((select delta_t from upper_point), (select delta_t from temperature_deviation order by t0 desc limit 1)) as y1
+			into res;
+			return res;
+		end;
+		$func$ language plpgsql;	
+	$create_func$; 
+	end;
+end $do_block$;
