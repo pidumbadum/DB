@@ -1,0 +1,54 @@
+-- ТЕСТИРОВАНИЕ ФУНКЦИЙ ДЛЯ РАСЧЕТА ИНТЕРПОЛЯЦИИ
+DO $$
+DECLARE
+    -- температура
+    var1 numeric = -15;
+    var2 numeric = 23;
+    var3 numeric = 26;
+    var4 numeric = 50;
+    -- параметры интерполяции
+    param1 interpol_point;
+    param2 interpol_point;
+    param3 interpol_point;
+    param4 interpol_point;
+    -- результат функции интерполяции
+    res1 numeric;
+    res2 numeric;
+    res3 numeric;
+    res4 numeric;
+BEGIN
+
+    -- поиск параметров интерполяции
+    param1 := find_interpolation_params(var1);
+    param2 := find_interpolation_params(var2);
+    param3 := find_interpolation_params(var3);
+    param4 := find_interpolation_params(var4);
+
+    -- получение результатов функции расчета интерполяции 
+    res1 := calculate_interpolation(var1, param1);
+    res2 := calculate_interpolation(var2, param2);
+    res3 := calculate_interpolation(var3, param3);
+    res4 := calculate_interpolation(var4, param4);
+
+    -- тесты 
+    raise notice e'Тест 1. Температура: % \nПараметры: x0=%, y0=%, x1=%, y1=%\nИнтерполяция: %', 
+        var1, param1.x0, param1.y0, param1.x1, param1.y1, res1;
+	raise notice e'Ожидаемая интерполяция: 0.5\nТЕСТ 1:%', 
+		case when res1 = 0.5 then e'ПРОЙДЕН\n' else e'ПРОВАЛЕН\n' end;
+    
+    raise notice e'Тест 2. Температура: %\nПараметры: x0=%, y0=%, x1=%, y1=%\nИнтерполяция: %', 
+        var2, param2.x0, param2.y0, param2.x1, param2.y1, res2;
+	raise notice e'Ожидаемая интерполяция: 1.8\nТЕСТ 2:%', 
+		case when res2 = 1.8 then e'ПРОЙДЕН\n' else e'ПРОВАЛЕН\n'end;
+    
+    raise notice e'Тест 3. Температура: %\nПараметры: x0=%, y0=%, x1=%, y1=%\nИнтерполяция: %', 
+        var3, param3.x0, param3.y0, param3.x1, param3.y1, res3;
+	raise notice e'Ожидаемая интерполяция: 2.3\nТЕСТ 3:%', 
+		case when res3 = 2.3 then e'ПРОЙДЕН\n' else e'ПРОВАЛЕН\n'end;
+    
+    raise notice e'Тест 4. Температура: %\nПараметры: x0=%, y0=%, x1=%, y1=%\nИнтерполяция: %', 
+        var4, param4.x0, param4.y0, param4.x1, param4.y1, res4;
+	raise notice e'Ожидаемая интерполяция: 4.5\nТЕСТ 4:%', 
+		case when res4 = 4.5 then e'ПРОЙДЕН\n' else e'ПРОВАЛЕН\n'end;
+		
+END $$;
