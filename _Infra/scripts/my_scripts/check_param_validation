@@ -36,8 +36,19 @@ begin
 	(5, 'val between 500 and 900', 2, array[3]),
 	(6, 'val between 0 and 59', 2, array[4]),
 	(7, 'val between 0 and 15', 2, array[5]),
-	(8, 'val between 0 and 150', 2, array[6])
-	;
+	(8, 'val between 0 and 150', 2, array[6]);
+
+	-- Комментарии к таблице error_types
+	comment on table error_types is 'Справочник типов ошибок валидации параметров';
+	comment on column error_types.id is 'Уникальный идентификатор типа ошибки';
+	comment on column error_types.description is 'Текстовое описание типа ошибки';
+	
+	-- Комментарии к таблице validation_rules
+	comment on table validation_rules is 'Правила валидации параметров с указанием применимых параметров и типов ошибок';
+	comment on column validation_rules.id is 'Уникальный идентификатор правила валидации';
+	comment on column validation_rules.val_rule is 'SQL-выражение для проверки значения параметра (использует плейсхолдер val)';
+	comment on column validation_rules.id_error is 'Ссылка на тип ошибки в таблице error_types';
+	comment on column validation_rules.id_param is 'Массив идентификаторов параметров из params_types, к которым применяется данное правило';
 	
 	--СОЗДАНИЕ ТИПА ДАННЫХ ДЛЯ ХРАНЕНИЯ СПИСКА ПАРАМЕТРОВ 
 	-- Дданные: высота, темпераутра, давление, направление ветра, скорость ветра, дальность сноса пуль 
@@ -54,6 +65,7 @@ begin
 	-- );
 
 	-- СОЗДАНИЕ ФУНКЦИИ ДЛЯ ПРОВЕРКИ ПРАВИЛЬНОСТИ ВВЕДЕНЫХ ПРАМАМЕТРОВ
+	
 	
 	end;
 	commit;
