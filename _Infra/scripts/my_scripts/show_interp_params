@@ -1,0 +1,14 @@
+with avg_temp as(
+	select 
+	coalesce((t0 + lead(t0, 1) over (order by t0)) / 2, 40)
+	as val
+	from temperature_deviation
+)
+select 
+	row_number() over (order by val) as id, 
+	(param).*,
+	round(val, 2) as x,
+	round(calculate_interpolation(val, param), 2)
+	from avg_temp
+	cross join find_interpolation_params((select val avg_temp limit 1)) as param
+;
