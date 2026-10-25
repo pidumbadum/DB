@@ -1,0 +1,65 @@
+-- запрос "список параметров с ошибками" с использованием union all
+with 
+-- cte 1: pivot параметров (вертикаль → горизонталь)
+pivoted_params as (
+    select 
+        mib.measurment_bath_id as batch_id,
+        l.equipment_type_id,
+        l.user_id,
+        l.started,
+        -- каждый параметр в отдельную колонку через max(case when)
+        max(case when mib.id_param_type = 1 then mib.param_value end) as height,
+        max(case when mib.id_param_type = 2 then mib.param_value end) as temperature,
+        max(case when mib.id_param_type = 3 then mib.param_value end) as pressure,
+        max(case when mib.id_param_type = 4 then mib.param_value end) as wind_direction,
+        max(case when mib.id_param_type = 5 then mib.param_value end) as wind_speed,
+        max(case when mib.id_param_type = 6 then mib.param_value end) as bullet_drift
+    from measurment_input_params mib
+    join logs l on l.id = mib.measurment_bath_id
+    group by mib.measurment_bath_id, l.equipment_type_id, l.user_id, l.started
+),
+
+-- cte 2: вызов функции валидации для каждой пачки
+validation_results as (
+    select 
+        pp.*,
+        find_val_errors(pp.batch_id) as error_text
+    from pivoted_params pp
+)
+
+-- финальный select с объединением через union all
+-- часть 1: пачки с ошибками
+select 
+    vr.batch_id as "№",
+    et.equipment_id as "тип оборудования",
+    vr.height as "высота метеопоста",
+    vr.temperature as "температура",
+    vr.pressure as "давление",
+    vr.wind_direction as "направление ветра",
+    vr.wind_speed as "скорость ветра",
+    vr.bullet_drift as "дальность сноса пуль",
+    true as "флаг: есть ошибка",
+    vr.error_text as "описание ошибки"
+from validation_results vr
+join equipment_types et on et.equipment_id = vr.equipment_type_id
+where vr.error_text is not null and vr.error_text != ''
+
+union all
+
+-- часть 2: пачки без ошибок
+select 
+    vr.batch_id as "№",
+    et.equipment_id as "тип оборудования",
+    vr.height as "высота метеопоста",
+    vr.temperature as "температура",
+    vr.pressure as "давление",
+    vr.wind_direction as "направление ветра",
+    vr.wind_speed as "скорость ветра",
+    vr.bullet_drift as "дальность сноса пуль",
+    false as "флаг: есть ошибка",
+    null as "описание ошибки"
+from validation_results vr
+join equipment_types et on et.equipment_id = vr.equipment_type_id
+where vr.error_text is null or vr.error_text = ''
+
+order by "№";
