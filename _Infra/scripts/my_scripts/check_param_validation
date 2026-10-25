@@ -2,9 +2,9 @@ do $do_block$
 begin 
 	begin
 	-- ОЧИСТКА ДЛЯ ПОВТОРНОГО ЗАПУСКА КОДА
-	drop function if exists check_param_validation;
 	drop table if exists error_types cascade; 
 	drop table if exists validation_rules; 
+	drop function if exists find_val_errors;
 
  	-- СОЗДАНИЕ ТАБЛИЦЫ СО СПИСКОМ ОШИБОК
 	create table if not exists error_types
@@ -29,14 +29,14 @@ begin
 	);
 
 	insert into validation_rules(id, val_rule, id_error, id_param) values
-	(1, 'val = trunc(val)', 1, array[1,3,4,5,6]),
-	(2, 'val between -500 and 10000', 2, array[1]),
-	(3, 'val between -58 and 58', 2, array[2]),
-	(4, 'val * 10 = trunc(val * 10)', 1, array[2]),
-	(5, 'val between 500 and 900', 2, array[3]),
-	(6, 'val between 0 and 59', 2, array[4]),
-	(7, 'val between 0 and 15', 2, array[5]),
-	(8, 'val between 0 and 150', 2, array[6]);
+	(1, '$1 = trunc($1)', 1, array[1,3,4,5,6]),
+	(2, '$1 between -500 and 10000', 2, array[1]),
+	(3, '$1 between -58 and 58', 2, array[2]),
+	(4, '$1 * 10 = trunc($1 * 10)', 1, array[2]),
+	(5, '$1 between 500 and 900', 2, array[3]),
+	(6, '$1 between 0 and 59', 2, array[4]),
+	(7, '$1 between 0 and 15', 2, array[5]),
+	(8, '$1 between 0 and 150', 2, array[6]);
 
 	-- Комментарии к таблице error_types
 	comment on table error_types is 'Справочник типов ошибок валидации параметров';
@@ -49,7 +49,9 @@ begin
 	comment on column validation_rules.val_rule is 'SQL-выражение для проверки значения параметра (использует плейсхолдер val)';
 	comment on column validation_rules.id_error is 'Ссылка на тип ошибки в таблице error_types';
 	comment on column validation_rules.id_param is 'Массив идентификаторов параметров из params_types, к которым применяется данное правило';
-	
+
+	end;
+	commit;
 	--СОЗДАНИЕ ТИПА ДАННЫХ ДЛЯ ХРАНЕНИЯ СПИСКА ПАРАМЕТРОВ 
 	-- Дданные: высота, темпераутра, давление, направление ветра, скорость ветра, дальность сноса пуль 
 	-- создаются ДВА типа данных 
@@ -63,11 +65,56 @@ begin
  --    wind_speed_val numeric,
  --    drift_val numeric
 	-- );
-
+	
 	-- СОЗДАНИЕ ФУНКЦИИ ДЛЯ ПРОВЕРКИ ПРАВИЛЬНОСТИ ВВЕДЕНЫХ ПРАМАМЕТРОВ
-	
-	
+	begin
+		execute $create_func$
+			create function find_val_errors(log_id int) 
+			returns text as $func$
+			declare 
+				res_string text:=e'';
+				val_row record;
+				val_rule_error record;
+				is_valid bool;
+				error_description varchar(255);
+				wrong_param_name char(100);
+				
+			begin
+				--первый цикл - получаю параметры из пачек
+				for val_row 
+				in select id_param_type, param_value 
+				from measurment_input_params where measurment_bath_id = log_id loop
+					-- raise notice '%', val_row;
+					-- второй цикл - поиск правил  в таблице public.validation_rules и проверка значений 
+					for val_rule_error 
+					in select val_rule, id_error from validation_rules 
+					where val_row.id_param_type = any(id_param) loop
+						--проверка самого значения
+						execute 'select(' || val_rule_error.val_rule || ')'
+						using val_row.param_value
+						into is_valid;
+
+						-- Записываю ошибку только если значние false
+						if not is_valid then 
+						
+							select description into error_description from error_types
+							where id = val_rule_error.id_error;
+
+							select param_name into wrong_param_name from params_types
+							where id = val_row.id_param_type;
+							
+							res_string := res_string ||error_description || e' - ' || wrong_param_name || e'\n';
+						end if;
+						
+					end loop;
+				end loop;
+				return res_string;
+			end;
+			$func$ language plpgsql;
+		$create_func$;
 	end;
 	commit;
+
+	
 	
 end $do_block$;
