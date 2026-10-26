@@ -5,7 +5,10 @@ begin
 	drop table if exists error_types cascade; 
 	drop table if exists validation_rules; 
 	drop function if exists find_val_errors;
+	drop function if exists check_single_rule;
 
+	-- СОздание
+	
  	-- СОЗДАНИЕ ТАБЛИЦЫ СО СПИСКОМ ОШИБОК
 	create table if not exists error_types
 	(
@@ -66,52 +69,45 @@ begin
  --    drift_val numeric
 	-- );
 	
-	-- СОЗДАНИЕ ФУНКЦИИ ДЛЯ ПРОВЕРКИ ПРАВИЛЬНОСТИ ВВЕДЕНЫХ ПРАМАМЕТРОВ
+	-- СОЗДАНИЕ ФУНКЦИИ проверки единственного параметра
 	begin
-		execute $create_func$
-			create function find_val_errors(log_id int) 
-			returns text as $func$
-			declare 
-				res_string text:=e'';
-				val_row record;
-				val_rule_error record;
-				is_valid bool;
-				error_description varchar(255);
-				wrong_param_name char(100);
-				
-			begin
-				--первый цикл - получаю параметры из пачек
-				for val_row 
-				in select id_param_type, param_value 
-				from measurment_input_params where measurment_bath_id = log_id loop
-					-- raise notice '%', val_row;
-					-- второй цикл - поиск правил  в таблице public.validation_rules и проверка значений 
-					for val_rule_error 
-					in select val_rule, id_error from validation_rules 
-					where val_row.id_param_type = any(id_param) loop
-						--проверка самого значения
-						execute 'select(' || val_rule_error.val_rule || ')'
-						using val_row.param_value
-						into is_valid;
+	create function check_single_rule(
+	    p_value numeric,
+	    p_rule text
+	)
+	returns boolean as $func$
+	declare
+	    v_result boolean;
+	begin
+	    execute 'select (' || p_rule || ')'
+	    using p_value
+	    into v_result;
+	    return v_result;
+	end;
+	$func$ language plpgsql;
+	end;
+	commit;
 
-						-- Записываю ошибку только если значние false
-						if not is_valid then 
-						
-							select description into error_description from error_types
-							where id = val_rule_error.id_error;
-
-							select param_name into wrong_param_name from params_types
-							where id = val_row.id_param_type;
-							
-							res_string := res_string ||error_description || e' - ' || wrong_param_name || e'\n';
-						end if;
-						
-					end loop;
-				end loop;
-				return res_string;
-			end;
-			$func$ language plpgsql;
-		$create_func$;
+	--СОЗДАНИЕ ФУНКЦИИ проверки параметров
+	-----------------
+	begin
+	create function find_val_errors(log_id int) 
+	returns text as $func$
+	declare
+	    res_string text;
+	begin
+	    select string_agg(et.description || ' - ' || pt.param_name, e'\n')
+	    into res_string
+	    from measurment_input_params mip
+	    join validation_rules vr on mip.id_param_type = any(vr.id_param)
+	    join error_types et on et.id = vr.id_error
+	    join params_types pt on pt.id = mip.id_param_type
+	    where mip.measurment_bath_id = log_id and not check_single_rule(mip.param_value, vr.val_rule)
+	    group by mip.measurment_bath_id;
+	    
+	    return res_string;
+	end;
+	$func$ language plpgsql;
 	end;
 	commit;
 
