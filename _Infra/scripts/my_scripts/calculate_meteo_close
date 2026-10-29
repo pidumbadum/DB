@@ -1,0 +1,120 @@
+-- СКРИПТ: ФУНКЦИИ РАСЧЕТА МЕТЕО ПРИБЛИЖЕННЫЙ И ТАБЛИЦЫ КОНСТАНТ
+do $do_block$
+begin
+    -- ОЧИСТКА ДЛЯ ПОВТОРНОГО ЗАПУСКА
+    drop table if exists meteo_constants cascade;
+    drop function if exists calculate_ddchcm;
+    drop function if exists calculate_vvvv;
+    drop function if exists calculate_bbbtt;
+    drop function if exists calculate_meteo_approximated;
+
+    -- ТАБЛИЦА ДЛЯ ХРАНЕНИЯ КОНСТАНТ
+    create table if not exists meteo_constants (
+        constant_name varchar(100) primary key,
+        constant_value numeric,
+        description text
+    );
+
+    -- НАПОЛНЕНИЕ КОНСТАНТАМИ
+    insert into meteo_constants (constant_name, constant_value, description) values
+    ('reference_pressure', 750, 'Эталонное давление для расчета БББТТ (мм рт. ст.)'),
+    ('default_height', 100, 'Высота метеопоста по умолчанию (м)'),
+    ('default_pressure', 750, 'Давление по умолчанию (мм рт. ст.)');
+
+    -- КОММЕНТАРИИ К ТАБЛИЦЕ
+    comment on table meteo_constants is 'Таблица констант для расчета метеобюллетеня приближенный';
+    comment on column meteo_constants.constant_name is 'Название константы';
+    comment on column meteo_constants.constant_value is 'Числовое значение константы';
+    comment on column meteo_constants.description is 'Описание константы';
+
+    commit;
+
+    -- ФУНКЦИЯ РАСЧЕТА ДДЧЧМ
+    execute $create_func$
+        create function calculate_ddchcm(p_timestamp timestamp)
+        returns text as $func$
+        declare
+            v_day text;
+            v_hour text;
+            v_minute_tens text;
+        begin
+            -- ДД: день месяца (2 цифры)
+            v_day := to_char(p_timestamp, 'DD');
+            
+            -- ЧЧ: часы (2 цифры)
+            v_hour := to_char(p_timestamp, 'HH24');
+            
+            -- М: десятки минут (1 цифра)
+            v_minute_tens := trunc(extract(minute from p_timestamp) / 10)::text;
+            
+            -- Сборка результата: ДДЧЧМ
+            return v_day || v_hour || v_minute_tens;
+        end;
+        $func$ language plpgsql;
+	$create_func$;
+
+    -- ФУНКЦИЯ РАСЧЕТА ВВВВ
+    execute $create_func$
+        create function calculate_vvvv(p_height numeric)
+        returns text as $func$
+        begin
+            -- ВВВВ: высота метеопоста, 4 цифры с ведущими нулями
+            return lpad(trunc(p_height)::text, 4, '0');
+        end;
+        $func$ language plpgsql;
+	$create_func$;
+
+    -- ФУНКЦИЯ РАСЧЕТА БББТТ
+    execute $create_func$
+        create function calculate_bbbtt(p_pressure numeric)
+        returns text as $func$
+        declare
+            v_ref_pressure numeric;
+            v_delta numeric;
+        begin
+            -- Получаем эталонное давление из таблицы констант
+            select constant_value into v_ref_pressure 
+            from meteo_constants 
+            where constant_name = 'reference_pressure';
+            
+            -- Вычисляем отклонение
+            v_delta := trunc(p_pressure) - v_ref_pressure;
+            
+            -- Формируем БББТТ
+            if v_delta >= 0 then
+                -- Положительное или ноль: 3 цифры с ведущими нулями
+                return lpad(v_delta::text, 3, '0');
+            else
+                -- Отрицательное: цифра 5 + 2 цифры модуля с ведущим нулем
+                return '5' || lpad(abs(v_delta)::text, 2, '0');
+            end if;
+        end;
+        $func$ language plpgsql;
+	$create_func$;
+	
+    -- ОБЪЕДИНЕННАЯ ФУНКЦИЯ РАСЧЕТА МЕТЕО ПРИБЛИЖЕННЫЙ
+    execute $create_func$
+        create function calculate_meteo_approximated(
+            p_timestamp timestamp,
+            p_height numeric,
+            p_pressure numeric
+        )
+        returns text as $func$
+        declare
+            v_ddchcm text;
+            v_vvvv text;
+            v_bbbtt text;
+        begin
+            -- Вычисляем каждую часть
+            v_ddchcm := calculate_ddchcm(p_timestamp);
+            v_vvvv := calculate_vvvv(p_height);
+            v_bbbtt := calculate_bbbtt(p_pressure);
+            
+            -- Возвращаем объединенный результат
+            return v_ddchcm || ', ' || v_vvvv || ', ' || v_bbbtt;
+        end;
+        $func$ language plpgsql;
+	$create_func$;
+	
+    commit;
+end $do_block$;

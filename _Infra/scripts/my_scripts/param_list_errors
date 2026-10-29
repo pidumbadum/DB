@@ -1,0 +1,120 @@
+-- запрос "список параметров с ошибками" с использованием union all
+with 
+-- cte 1: pivot параметров (вертикаль → горизонталь)
+pivoted_params as (
+    select 
+        mib.measurment_bath_id as batch_id,
+        l.equipment_type_id,
+        l.user_id,
+        l.started,
+        -- каждый параметр в отдельную колонку через max(case when)
+        max(case when mib.id_param_type = 1 then mib.param_value end) as height,
+        max(case when mib.id_param_type = 2 then mib.param_value end) as temperature,
+        max(case when mib.id_param_type = 3 then mib.param_value end) as pressure,
+        max(case when mib.id_param_type = 4 then mib.param_value end) as wind_direction,
+        max(case when mib.id_param_type = 5 then mib.param_value end) as wind_speed,
+        max(case when mib.id_param_type = 6 then mib.param_value end) as bullet_drift
+    from measurment_input_params mib
+    join logs l on l.id = mib.measurment_bath_id
+    group by mib.measurment_bath_id, l.equipment_type_id, l.user_id, l.started
+),
+
+-- cte 2: вызов функции валидации для каждой пачки
+validation_results as (
+    select 
+        pp.*,
+        find_val_errors(pp.batch_id) as error_text
+    from pivoted_params pp
+)
+
+-- финальный select с объединением через union all
+-- часть 1: пачки с ошибками
+select 
+    vr.batch_id as "№",
+    et.equipment_id as "тип оборудования",
+    vr.height as "высота метеопоста",
+    vr.temperature as "температура",
+    vr.pressure as "давление",
+    vr.wind_direction as "направление ветра",
+    vr.wind_speed as "скорость ветра",
+    vr.bullet_drift as "дальность сноса пуль",
+    true as "флаг: есть ошибка",
+    vr.error_text as "описание ошибки"
+from validation_results vr
+join equipment_types et on et.equipment_id = vr.equipment_type_id
+where vr.error_text is not null and vr.error_text != ''
+
+union all
+
+-- часть 2: пачки без ошибок
+select 
+    vr.batch_id as "№",
+    et.equipment_id as "тип оборудования",
+    vr.height as "высота метеопоста",
+    vr.temperature as "температура",
+    vr.pressure as "давление",
+    vr.wind_direction as "направление ветра",
+    vr.wind_speed as "скорость ветра",
+    vr.bullet_drift as "дальность сноса пуль",
+    false as "флаг: есть ошибка",
+    null as "описание ошибки"
+from validation_results vr
+join equipment_types et on et.equipment_id = vr.equipment_type_id
+where vr.error_text is null or vr.error_text = ''
+
+order by "№";
+
+-- запрос "лучший стрелок" - список пользователей и количество ошибок
+with 
+-- cte 1: pivot параметров
+pivoted_params as (
+    select 
+        mib.measurment_bath_id as batch_id,
+        l.equipment_type_id,
+        l.user_id,
+        l.started,
+        max(case when mib.id_param_type = 1 then mib.param_value end) as height,
+        max(case when mib.id_param_type = 2 then mib.param_value end) as temperature,
+        max(case when mib.id_param_type = 3 then mib.param_value end) as pressure,
+        max(case when mib.id_param_type = 4 then mib.param_value end) as wind_direction,
+        max(case when mib.id_param_type = 5 then mib.param_value end) as wind_speed,
+        max(case when mib.id_param_type = 6 then mib.param_value end) as bullet_drift
+    from measurment_input_params mib
+    join logs l on l.id = mib.measurment_bath_id
+    group by mib.measurment_bath_id, l.equipment_type_id, l.user_id, l.started
+),
+
+-- cte 2: вызов функции валидации
+validation_results as (
+    select 
+        pp.*,
+        find_val_errors(pp.batch_id) as error_text
+    from pivoted_params pp
+),
+
+-- cte 3: подсчет количества ошибок для каждой пачки
+error_counts as (
+    select 
+        vr.user_id,
+        vr.batch_id,
+        -- подсчет количества ошибок через количество переносов строк
+        case 
+            when vr.error_text is null or vr.error_text = '' then 0
+            else array_length(string_to_array(vr.error_text, e'\n'), 1)
+        end as error_count
+    from validation_results vr
+)
+
+-- финальный select: группировка по пользователю с суммарным количеством ошибок
+select 
+    e.id as "id пользователя",
+    e.name as "имя пользователя",
+    p.position_name as "должность",
+    count(ec.batch_id) as "всего пачек",
+    coalesce(sum(ec.error_count), 0) as "всего ошибок",
+    round(coalesce(sum(ec.error_count), 0)::numeric / nullif(count(ec.batch_id), 0), 2) as "среднее ошибок на пачку"
+from employee e
+left join positions p on p.position_id = e.military_rank_id
+left join error_counts ec on ec.user_id = e.id
+group by e.id, e.name, p.position_name
+order by "всего ошибок" asc, "среднее ошибок на пачку" asc;

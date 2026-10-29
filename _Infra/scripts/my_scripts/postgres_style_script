@@ -172,7 +172,8 @@ raise notice 'Таблицы созданы';
 	('Температура', 2),
 	('Давление', 3),
 	('Направление ветра', 4),
-	('Скорость ветра', 5);
+	('Скорость ветра', 5),
+	('Дальность сноса пуль', 1);
 	
 	-- Сотрудники (с привязкой к должностям)
 	-- military_rank_id: 1=Стрелок, 2=Сержант, 3=Лейтенант, 4=Капитан
@@ -201,39 +202,44 @@ raise notice 'Таблицы созданы';
 	(1, 2, 22.50),      -- температура 22.5 °C
 	(1, 3, 755.00),     -- давление 755 гПа
 	(1, 4, 180.00),     -- направление ветра 180°
-	(1, 5, 5.20);       -- скорость ветра 5.2 м/с
+	(1, 5, 5.20),       -- скорость ветра 5.2 м/с
+	(1, 6, 5);
 	
 	-- Пачка 2 (logs.id=2): полный набор
 	insert into measurment_input_params (measurment_bath_id, id_param_type, param_value) values 
-	(2, 1, 200.00),
+	(2, 1, -6000.00), -- высота вне диапазона 
 	(2, 2, 18.00),
 	(2, 3, 760.00),
 	(2, 4, 270.00),
-	(2, 5, 8.50);
+	(2, 5, 8.50),
+	(2, 6, 5);
 	
 	-- Пачка 3 (logs.id=3): полный набор
 	insert into measurment_input_params (measurment_bath_id, id_param_type, param_value) values 
 	(3, 1, 180.00),
-	(3, 2, 25.00),
+	(3, 2, 60.1), --слишком выоская температура 
 	(3, 3, 750.00),
 	(3, 4, 90.00),
-	(3, 5, 3.10);
+	(3, 5, 3.10),
+	(3, 6, 5);
 	
 	-- Пачка 4 (logs.id=4): полный набор
 	insert into measurment_input_params (measurment_bath_id, id_param_type, param_value) values 
 	(4, 1, 220.00),
 	(4, 2, 20.00),
-	(4, 3, 758.00),
+	(4, 3, 758.67), -- не целое значение
 	(4, 4, 45.00),
-	(4, 5, 6.00);
+	(4, 5, 6.00),
+	(4, 6, 5);
 	
 	-- Пачка 5 (logs.id=5): полный набор
 	insert into measurment_input_params (measurment_bath_id, id_param_type, param_value) values 
 	(5, 1, 160.00),
 	(5, 2, 24.00),
 	(5, 3, 752.00),
-	(5, 4, 315.00),
-	(5, 5, 4.50);
+	(5, 4, 315.00), --выход за пределы значений
+	(5, 5, 4.50),
+	(5, 6, 5);
 	
 	-- Пачка 6 (logs.id=6): полный набор
 	insert into measurment_input_params (measurment_bath_id, id_param_type, param_value) values 
@@ -241,15 +247,17 @@ raise notice 'Таблицы созданы';
 	(6, 2, 21.00),
 	(6, 3, 757.00),
 	(6, 4, 135.00),
-	(6, 5, 7.00);
+	(6, 5, 14.5), -- не целое значение
+	(6, 6, 5);
 	
 	-- Пачка 7 (logs.id=7): полный набор
 	insert into measurment_input_params (measurment_bath_id, id_param_type, param_value) values 
 	(7, 1, 210.00),
-	(7, 2, 19.00),
+	(7, 2, 60.1), --слишком выоская температура
 	(7, 3, 761.00),
 	(7, 4, 225.00),
-	(7, 5, 9.00);
+	(7, 5, 14.5), -- не целое значение
+	(7, 6, 15.89); -- не целое значение 
 	
 	raise notice 'Тестовые данные добавлены';
 commit;
@@ -298,33 +306,33 @@ commit;
 	-- ОГРАНИЧЕНИЯ
 	----------------------------------
 	
-	-- Значение параметра не может быть слишком экстремальным
-	alter table public.measurment_input_params 
-		add constraint chk_param_value
-		check (param_value between -100 and 10000);
+	-- -- Значение параметра не может быть слишком экстремальным
+	-- alter table public.measurment_input_params 
+	-- 	add constraint chk_param_value
+	-- 	check (param_value between -100 and 10000);
 	
-	-- Название должности не должно быть пустым
-	alter table public.positions 
-		add constraint chk_position_name
-		check (position_name is not null and length(position_name) > 0);
+	-- -- Название должности не должно быть пустым
+	-- alter table public.positions 
+	-- 	add constraint chk_position_name
+	-- 	check (position_name is not null and length(position_name) > 0);
 	
-	-- ФИО сотрудника не должно быть пустым
-	alter table public.employee 
-		add constraint chk_employee_name
-		check (name is not null and length(name) > 0);
+	-- -- ФИО сотрудника не должно быть пустым
+	-- alter table public.employee 
+	-- 	add constraint chk_employee_name
+	-- 	check (name is not null and length(name) > 0);
 	
-	-- Допуски отклонений оборудования не могут быть отрицательными
-	alter table public.equipment_types 
-		add constraint chk_deviations_positive
-		check (
-			temperture_devation >= 0 
-			and pressure_devation >= 0 
-			and wind_direction_devation >= 0 
-			and wind_speed_devation >= 0 
-			and bullet_drift_dist_devation >= 0
-		);
+	-- -- Допуски отклонений оборудования не могут быть отрицательными
+	-- alter table public.equipment_types 
+	-- 	add constraint chk_deviations_positive
+	-- 	check (
+	-- 		temperture_devation >= 0 
+	-- 		and pressure_devation >= 0 
+	-- 		and wind_direction_devation >= 0 
+	-- 		and wind_speed_devation >= 0 
+	-- 		and bullet_drift_dist_devation >= 0
+	-- 	);
 		
-	raise notice 'Связи добавлены и ограничения добавлены';
+	-- raise notice 'Связи добавлены и ограничения добавлены';
 	commit;
 
 	--СОздание новой таблицы с температурой
