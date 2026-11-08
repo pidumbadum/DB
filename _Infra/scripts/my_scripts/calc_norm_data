@@ -1,0 +1,89 @@
+-- ТЕСТОВЫЙ СКРИПТ ДЛЯ РАСЧЕТА МЕТЕОБЮЛЛЕТЕНЯ
+-- Данные из ТЗ: Высота=100, Давление=765, Температура=25, Направление=15, Скорость=6, Тип=ДМК
+
+do $$
+declare
+    v_params input_meteo_params;
+    v_equipment_id int := 1; -- 1 = ДМК, 2 = ВР
+    v_result record;
+begin
+    -- Устанавливаем типовые параметры из ТЗ
+    v_params := row(100, 765, 25, 15, 6, 0)::input_meteo_params;
+    
+    raise notice 'ТЕСТОВЫЙ РАСЧЕТ МЕТЕОБЮЛЛЕТЕНЯ';
+    raise notice 'Входные данные:';
+    raise notice '  Высота метеопоста: % м', v_params.height_val;
+    raise notice '  Давление: % мм рт. ст.', v_params.pressure_val;
+    raise notice '  Температура: % °C', v_params.temperature_val;
+    raise notice '  Направление ветра: %', v_params.wind_dir_val;
+    raise notice '  Скорость ветра: % м/с', v_params.wind_speed_val;
+    raise notice '  Тип оборудования: ДМК';
+    raise notice '';
+    raise notice 'Результаты расчета по стандартным высотам:';
+end $$;
+
+-- Вызов функции расчета и вывод результатов в виде таблицы
+select 
+    res_height as "Высота (H)",
+    res_tt as "TT",
+    res_hh as "HH",
+    res_cc as "CC"
+from calculate_meteo_bulletin(
+    row(100, 765, 25, 15, 6, 0)::input_meteo_params,
+    1
+);
+
+-- Дополнительный расчет заголовка бюллетеня
+do $$
+declare
+    v_pressure int := 765;
+    v_height int := 100;
+    v_temperature numeric := 25;
+    v_delta_tv numeric;
+    v_t0 numeric;
+    v_t0_mp int;
+    v_delta_p int;
+    v_bbbtt text;
+    v_vvvv text;
+    v_tt_code text;
+begin
+    -- Расчет виртуальной температуры
+    v_delta_tv := fn_calc_temperature_interpolation(v_temperature);
+    v_t0 := v_temperature + v_delta_tv;
+    v_t0_mp := round(v_t0 - 15.9);
+    
+    -- Расчет отклонения давления
+    v_delta_p := v_pressure - 750;
+    
+    -- Формирование БББТТ
+    if v_delta_p >= 0 then
+        v_bbbtt := lpad(v_delta_p::text, 3, '0');
+    else
+        v_bbbtt := '5' || lpad(abs(v_delta_p)::text, 2, '0');
+    end if;
+    
+    -- Формирование ВВВВ
+    v_vvvv := lpad(v_height::text, 4, '0');
+    
+    -- Формирование ТТ
+    if v_t0_mp >= 0 then
+        v_tt_code := lpad(v_t0_mp::text, 2, '0');
+    else
+        v_tt_code := lpad((abs(v_t0_mp) + 50)::text, 2, '0');
+    end if;
+    
+    raise notice '';
+    raise notice 'РАСЧЕТ ЗАГОЛОВКА БЮЛЛЕТЕНЯ';
+    raise notice 'ΔTV (виртуальная поправка): %', v_delta_tv;
+    raise notice 'T0 (приземная виртуальная температура): %', v_t0;
+    raise notice 'ΔT0мп (отклонение температуры): %', v_t0_mp;
+    raise notice 'ΔНо (отклонение давления): %', v_delta_p;
+    raise notice '';
+    raise notice 'Заголовок бюллетеня:';
+    raise notice '  ВВВВ (высота): %', v_vvvv;
+    raise notice '  БББТТ (давление): %', v_bbbtt;
+    raise notice '  ТТ (температура): %', v_tt_code;
+    raise notice '';
+    raise notice 'Пример полного заголовка (ДДЧЧМ + ВВВВ + БББТТ + ТТ):';
+    raise notice '  24093 % % %', v_vvvv, v_bbbtt, v_tt_code;
+end $$;
