@@ -19,22 +19,44 @@ begin
     delete from calc_report_headers;
 
     -- 2. переносим заголовки из массивов в новую таблицу, игнорируя дубликаты
-    insert into calc_report_headers (type_id, header_value, display_order)
-    select type_id, header_value, min(display_order) as display_order
-    from (
-        select 
-            cct.id as type_id,
-            cct.header_values[i] as header_value,
-            i as display_order
-        from calc_correction_types cct
-        cross join generate_series(1, array_length(cct.header_values, 1)) as i
-        where cct.header_values is not null
-    ) as unnested_headers
-    group by type_id, header_value
-    order by type_id, min(display_order);
-
-    -- 3. очищаем массивы заголовков в старой таблице
-    update calc_correction_types set header_values = null;
+    -- type_id = 8: Положительные температуры (Таблица 2)
+    insert into calc_report_headers (type_id, header_value, display_order) values
+    (8, 1, 1), (8, 2, 2), (8, 3, 3), (8, 4, 4), (8, 5, 5),
+    (8, 6, 6), (8, 7, 7), (8, 8, 8), (8, 9, 9), (8, 10, 10),
+    (8, 20, 11), (8, 30, 12);
+    
+    -- type_id = 9: Отрицательные температуры (Таблица 2)
+    insert into calc_report_headers (type_id, header_value, display_order) values
+    (9, 1, 1), (9, 2, 2), (9, 3, 3), (9, 4, 4), (9, 5, 5),
+    (9, 6, 6), (9, 7, 7), (9, 8, 8), (9, 9, 9), (9, 10, 10),
+    (9, 20, 11), (9, 30, 12), (9, 40, 13), (9, 50, 14);
+    
+    -- type_id = 4: Скорость ветра (ВР)
+    insert into calc_report_headers (type_id, header_value, display_order) values
+    (4, 40, 1), (4, 50, 2), (4, 60, 3), (4, 70, 4), (4, 80, 5),
+    (4, 90, 6), (4, 100, 7), (4, 110, 8), (4, 120, 9), (4, 130, 10),
+    (4, 140, 11), (4, 150, 12);
+    
+    -- type_id = 5: Направление ветра (ВР)
+    insert into calc_report_headers (type_id, header_value, display_order) values
+    (5, 40, 1), (5, 50, 2), (5, 60, 3), (5, 70, 4), (5, 80, 5),
+    (5, 90, 6), (5, 100, 7), (5, 110, 8), (5, 120, 9), (5, 130, 10),
+    (5, 140, 11), (5, 150, 12);
+    
+    -- type_id = 6: Скорость ветра (ДМК)
+    insert into calc_report_headers (type_id, header_value, display_order) values
+    (6, 3, 1), (6, 4, 2), (6, 5, 3), (6, 6, 4), (6, 7, 5),
+    (6, 8, 6), (6, 9, 7), (6, 10, 8), (6, 11, 9), (6, 12, 10),
+    (6, 13, 11), (6, 14, 12), (6, 15, 13);
+    
+    -- type_id = 7: Направление ветра (ДМК)
+    insert into calc_report_headers (type_id, header_value, display_order) values
+    (7, 3, 1), (7, 4, 2), (7, 5, 3), (7, 6, 4), (7, 7, 5),
+    (7, 8, 6), (7, 9, 7), (7, 10, 8), (7, 11, 9), (7, 12, 10),
+    (7, 13, 11), (7, 14, 12), (7, 15, 13);
+    
+    raise notice 'заголовки вставлены в calc_report_headers';
+ 	commit;
 
     -- 4. удаляем старые ошибочные данные таблицы 2 
     delete from calc_correction where type_id in (8, 9);
@@ -96,7 +118,7 @@ begin
     insert into calc_correction(height_id, type_id, row_values) values
     (5, 7, array[3]), (6, 7, array[3]), (7, 7, array[3]), (8, 7, array[3]), (9, 7, array[3]);
 
-    raise notice 'данные таблиц 2 и 3 исправлены и дополнены, заголовки нормализованы!';
+    raise notice 'данные таблиц 2 и 3 исправлены';
 
     -- 7. удаляем колонку header_values, так как данные перенесены
     alter table calc_correction_types drop column if exists header_values;
@@ -125,5 +147,5 @@ begin
         end if;
     end if;
 
-    raise notice 'все связи между таблицами успешно добавлены!';
+    raise notice 'все связи между таблицами добавленыф';
 end $$;
