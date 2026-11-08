@@ -1,0 +1,158 @@
+-- СКРИПТ СОЗДАНИЯ ТИПА И ХРАНИМОЙ ПРОЦЕДУРЫ ДЛЯ РАСЧЕТА БЮЛЛЕТЕНЯ
+do $$
+begin
+	drop type if exists input_meteo_params cascade;
+    -- 1. Создаем тип "входящие параметры"
+    create type input_meteo_params as (
+            height_val int,          -- высота метеопоста
+            pressure_val int,        -- давление
+            temperature_val numeric, -- температура
+            wind_dir_val int,        -- направление ветра
+            wind_speed_val int,      -- скорость ветра (для дмк)
+            drift_val int            -- дальность сноса пуль (для вр)
+        );
+		
+	-- 2. Создаем хранимую функцию для расчета
+	create or replace function calculate_meteo_bulletin(
+	    p_params input_meteo_params,
+	    p_equipment_id int -- 1 = ДМК, 2 = ВР
+	)
+	returns table (
+	    res_height int,
+	    res_tt int,
+	    res_hh int,
+	    res_cc int
+	) as $func$
+	declare
+	    -- переменные для начальных расчетов
+	    v_delta_tv numeric;
+	    v_t0 numeric;
+	    v_t0_mp int;
+	    
+	    -- переменные для цикла и поиска
+	    v_h_row record;
+	    v_type_id_tt int;
+	    v_type_id_cc int;
+	    v_type_id_hh int;
+	    
+	    v_tens int;
+	    v_units int;
+	    v_tens_idx int;
+	    v_units_idx int;
+	    v_input_idx int;
+	    
+	    v_row_vals int[];
+	    v_row_vals_dir int[];
+	    
+	    v_tt_raw int;
+	    v_hh_delta int;
+	    v_input_val int;
+	begin
+	    -- шаг 1: расчет виртуальной температуры и отклонения
+	    v_delta_tv := fn_calc_temperature_interpolation(p_params.temperature_val);
+	    v_t0 := p_params.temperature_val + v_delta_tv;
+	    v_t0_mp := round(v_t0 - 15.9);
+	
+	    -- определяем id типов таблиц в зависимости от оборудования
+	    if p_equipment_id = 1 then -- дмк
+	        v_type_id_cc := 6; -- скорость ветра (дмк)
+	        v_type_id_hh := 7; -- направление ветра (дмк)
+	        v_input_val := p_params.wind_speed_val;
+	    else -- вр
+	        v_type_id_cc := 4; -- скорость ветра (вр)
+	        v_type_id_hh := 5; -- направление ветра (вр)
+	        v_input_val := p_params.drift_val;
+	    end if;
+	
+	    -- определяем тип таблицы для температуры (8 - положительные, 9 - отрицательные)
+	    if v_t0_mp >= 0 then
+	        v_type_id_tt := 8;
+	    else
+	        v_type_id_tt := 9;
+	    end if;
+		
+	    for v_h_row in select id, height from calc_correction_heights order by height loop
+	        
+	        -- --- расчет tt (таблица 2) ---
+	        -- разбиваем отклонение на десятки и единицы
+	        v_tens := (v_t0_mp / 10) * 10;
+	        v_units := v_t0_mp - v_tens;
+	
+	        -- ищем индексы в нормализованной таблице заголовков
+	        select display_order into v_tens_idx 
+	        from calc_report_headers 
+	        where type_id = v_type_id_tt and header_value = abs(v_tens);
+	        
+	        select display_order into v_units_idx 
+	        from calc_report_headers 
+	        where type_id = v_type_id_tt and header_value = abs(v_units);
+	
+	        -- получаем массив значений из таблицы коррекций
+	        select row_values into v_row_vals 
+	        from calc_correction 
+	        where height_id = v_h_row.id and type_id = v_type_id_tt;
+	
+	        -- складываем значения
+	        v_tt_raw := 0;
+	        if v_tens_idx is not null then
+	            v_tt_raw := v_tt_raw + v_row_vals[v_tens_idx];
+	        end if;
+	        if v_units_idx is not null then
+	            v_tt_raw := v_tt_raw + v_row_vals[v_units_idx];
+	        end if;
+	
+	        -- формирование кода tt (если отрицательное, прибавляем 50 по правилам метеобюллетеня)
+	        if v_tt_raw < 0 then
+	            res_tt := abs(v_tt_raw) + 50;
+	        else
+	            res_tt := v_tt_raw;
+	        end if;
+	
+	        -- --- расчет cc и hh (таблица 3) ---
+	        -- проверка пороговых значений (ветер меньше 3 м/с для дмк или дальность меньше 40 для вр)
+	        if (p_equipment_id = 1 and v_input_val < 3) or 
+	           (p_equipment_id = 2 and v_input_val < 40) then
+	            res_cc := 0;
+	            res_hh := 0;
+	        else
+	            -- ищем индекс входного параметра (скорости или дальности)
+	            select display_order into v_input_idx 
+	            from calc_report_headers 
+	            where type_id = v_type_id_cc and header_value = v_input_val;
+	
+	            -- получаем массивы для скорости и направления
+	            select row_values into v_row_vals 
+	            from calc_correction 
+	            where height_id = v_h_row.id and type_id = v_type_id_cc;
+	            
+	            select row_values into v_row_vals_dir 
+	            from calc_correction 
+	            where height_id = v_h_row.id and type_id = v_type_id_hh;
+	
+	            -- извлекаем значения по индексу
+	            if v_input_idx is not null then
+	                res_cc := v_row_vals[v_input_idx];
+	                v_hh_delta := v_row_vals_dir[v_input_idx];
+	            else
+	                res_cc := 0;
+	                v_hh_delta := 0;
+	            end if;
+	
+	            -- расчет направления (диапазон 0-59)
+	            res_hh := (p_params.wind_dir_val + v_hh_delta) % 60;
+	        end if;
+	
+	        res_height := v_h_row.height;
+	        return next;
+	    end loop;
+	end;
+	$func$ language plpgsql;
+
+end $$;
+
+-- 3. тестовый запуск с данными из тз
+-- высота 100, давление 765, температура 25, направление 15, скорость 6, тип дмк (1)
+select * from calculate_meteo_bulletin(
+    row(100, 765, 25, 15, 6, 0)::input_meteo_params, 
+    1
+);
