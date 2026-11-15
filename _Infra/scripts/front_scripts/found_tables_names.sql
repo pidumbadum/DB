@@ -101,5 +101,5 @@ join sys.tables tr on fk.referenced_object_id = tr.object_id
 join sys.foreign_key_columns fkc on fk.object_id = fkc.constraint_object_id
 join sys.columns cp on fkc.parent_column_id = cp.column_id and cp.object_id = tp.object_id
 join sys.columns cr on fkc.referenced_column_id = cr.column_id and cr.object_id = tr.object_id
-where tp.name = 'bm_JournalBarnetDocs' or tr.name = 'bm_JournalBarnetDocs'
+where tp.name = 'journal' or tr.name = 'journal'
 order by parent_table, referenced_table;
