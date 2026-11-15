@@ -1,4 +1,3 @@
-<img width="1473" height="863" alt="schema-sales" src="https://github.com/user-attachments/assets/4403fcad-e944-440e-ba74-ed11ec3d2a45" />
 # Анализ направления "Продажа товара"
 
 ## Основные таблицы
