@@ -69,4 +69,37 @@ order by t.name;
 -- reportslngstock	62
 -- stockperiod	56
 
+select 
+    t.name 'имя таблицы',
+    sum(p.rows) 'сумма строк'
+from sys.tables t 
+join sys.partitions p on t.object_id = p.object_id
+group by t.name having sum(p.rows) > 1
+order by sum(p.rows) desc;
 
+select 
+    t.name 'имя таблицы'
+from sys.tables t;
+
+select 
+    t.name 'имя таблицы',
+    sum(p.rows) 'сумма строк'
+from sys.tables t 
+join sys.partitions p on t.object_id = p.object_id
+group by t.name having sum(p.rows) = 1
+order by t.name;
+
+
+select 
+    schema_name(tp.schema_id) + '.' + tp.name as parent_table,
+    cp.name as parent_column,
+    schema_name(tr.schema_id) + '.' + tr.name as referenced_table,
+    cr.name as referenced_column
+from sys.foreign_keys fk
+join sys.tables tp on fk.parent_object_id = tp.object_id
+join sys.tables tr on fk.referenced_object_id = tr.object_id
+join sys.foreign_key_columns fkc on fk.object_id = fkc.constraint_object_id
+join sys.columns cp on fkc.parent_column_id = cp.column_id and cp.object_id = tp.object_id
+join sys.columns cr on fkc.referenced_column_id = cr.column_id and cr.object_id = tr.object_id
+where tp.name = 'bm_JournalBarnetDocs' or tr.name = 'bm_JournalBarnetDocs'
+order by parent_table, referenced_table;
