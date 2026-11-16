@@ -38,12 +38,7 @@
 - Поле `id` является корректным числовым первичным ключом. Все JOIN-операции с таблицей `vendors` должны выполняться исключительно по полю `id`.
 
 ## Связи между таблицами
-
-```
-bm_StorageOperations
-    └── VendorID --> vendors.id (поставщик)
-            └── clientgroup --> vendorgroup.vendorgroupid (группа контрагента)
-```
+<img width="1009" height="739" alt="schema_providers" src="https://github.com/user-attachments/assets/3aa42658-cf5b-4aea-8165-600b04aa7bbb" />
 
 ## Примечания по использованию в аналитике
 
