@@ -49,17 +49,7 @@
    - Позволяет анализировать бонусные операции по сотрудникам
 
 ## Связи между таблицами
-
-```
-personnel
-    ├── journal (loginid) — кассовые операции
-    ├── bm_JournalBarnetDocs (PersonID) — документы
-    └── bm_BonusHistory (PersonID) — бонусы
-
-bm_PersonnelSecurity
-    ├── PersonID → personnel
-    └── ObjectID → bm_SecurityObjects
-```
+<img width="946" height="686" alt="schema_personal" src="https://github.com/user-attachments/assets/32739fb9-b91b-49fa-abdd-10d559ec1f0c" />
 
 ## Примечания
 
