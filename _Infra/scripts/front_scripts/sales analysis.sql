@@ -64,3 +64,60 @@ select
     (select count(distinct transtype) from journal where transtype is not null) as уникальных_в_journal,
     (select count(*) from transtype) as всего_в_справочнике,
     (select count(*) from journal j left join transtype t on j.transtype = t.transtypeid where t.transtypeid is null and j.transtype is not null) as висячих_ссылок;
+
+select top 3 * from pricelist;
+select top 3 * from pricegroup;
+select top 3 * from product;
+
+select top 3
+    basecost as 'Базовая цена',
+    p.description as 'Оипсание проудкта',
+    pg.description as 'описание цены'
+from pricelist pl
+left join product p on pl.productid = p.id
+left join pricegroup pg on pl.groupid = pg.pricegroupid
+where basecost > 0;
+
+select * from pricegroup
+where price1 is not Null 
+    or price2 is not Null
+    or price3 is not Null
+    or price4 is not Null;
+
+-- Ищем товары, у которых заполнены поля цен в самой таблице product
+select top 10
+    id,
+    description as 'Наименование',
+    price1 as 'Цена 1 (вероятно, розничная)',
+    price2 as 'Цена 2 (вероятно, закупочная/опт)',
+    price3 as 'Цена 3',
+    price4 as 'Цена 4',
+    cost as 'Себестоимость'
+from product
+where price1 is not null and price1 > 0
+   or price2 is not null and price2 > 0
+   or price3 is not null and price3 > 0
+   or price4 is not null and price4 > 0
+order by id;
+
+select top 15
+    pl.basecost as 'Установленная цена',
+    p.description as 'Товар',
+    jbd.DateAdd as 'Дата документа',
+    jtd.description as 'Тип документа'
+from pricelist pl
+join bm_JournalBarnetDocs jbd on pl.DocumentID = jbd.ID
+left join bm_JournalTypeDocuments jtd on jbd.DocumentTypeID = jtd.ID
+left join product p on pl.productid = p.id
+where pl.basecost > 0
+order by jbd.DateAdd desc;
+
+select
+    count(jtd.description) 'количесвто документов данного типа',
+    jtd.description as 'Тип документа'
+from pricelist pl
+join bm_JournalBarnetDocs jbd on pl.DocumentID = jbd.ID
+left join bm_JournalTypeDocuments jtd on jbd.DocumentTypeID = jtd.ID
+left join product p on pl.productid = p.id
+where pl.basecost > 0
+order by jbd.DateAdd desc;
