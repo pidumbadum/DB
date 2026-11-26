@@ -2,7 +2,7 @@
 -- Скрипт создания OLAP базы данных
 -- Загрузка ресурсов
 
-create database db2026;
+-- create database db2026;
 
 do $$
 begin
