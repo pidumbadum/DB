@@ -1,0 +1,35 @@
+do $$
+begin
+	-- удаление неиспользуемых единиц измерения
+	delete from dim_ranges
+	where external_id not in (1, 3, 6, 7, 12, 15, 18, 39, 41, 42, 68, 69, 72, 73, 74, 75, 77, 111, 163, 796);
+	
+
+	-- Создание новой структуры
+	alter table dim_ranges add column if not exists group_code bigint;
+	alter table dim_ranges add column if not exists group_name text;
+	alter table dim_ranges add column if not exists general_code bigint;
+	alter table dim_ranges add column if not exists general_name text;
+
+	commit;
+
+	-- Добавление новых данных 
+	update dim_ranges set group_code = 3, group_name = 'Штуки', general_code = 69, general_name = 'шт' where external_id = 1;   
+	update dim_ranges set group_code = 2, group_name = 'Объем', general_code = 39, general_name = 'литр' where external_id = 3; 
+	update dim_ranges set group_code = 1, group_name = 'Вес', general_code = 42, general_name = 'кг' where external_id = 6;     
+	update dim_ranges set group_code = 2, group_name = 'Объем', general_code = 39, general_name = 'литр' where external_id = 7; 
+	update dim_ranges set group_code = 2, group_name = 'Объем', general_code = 39, general_name = 'литр' where external_id = 12;
+	update dim_ranges set group_code = 1, group_name = 'Вес', general_code = 42, general_name = 'кг' where external_id = 15;    
+	update dim_ranges set group_code = 1, group_name = 'Вес', general_code = 42, general_name = 'кг' where external_id = 18;    
+	update dim_ranges set group_code = 2, group_name = 'Объем', general_code = 39, general_name = 'литр' where external_id = 39;
+	update dim_ranges set group_code = 1, group_name = 'Вес', general_code = 42, general_name = 'кг' where external_id = 41;    
+	update dim_ranges set group_code = 1, group_name = 'Вес', general_code = 42, general_name = 'кг' where external_id = 42;    
+	update dim_ranges set group_code = 3, group_name = 'Штуки', general_code = 69, general_name = 'шт' where external_id = 68;  
+	update dim_ranges set group_code = 3, group_name = 'Штуки', general_code = 69, general_name = 'шт' where external_id = 69;  
+	update dim_ranges set group_code = 2, group_name = 'Объем', general_code = 39, general_name = 'литр' where external_id = 72;
+	update dim_ranges set group_code = 2, group_name = 'Объем', general_code = 39, general_name = 'литр' where external_id = 73;
+update dim_ranges set group_code = 2, group_name = 'Объем', general_code = 39, general_name = 'литр' where external_id = 74;
+update dim_ranges set group_code = 2, group_name = 'Объем', general_code = 39, general_name = 'литр' where external_id = 75;
+update dim_ranges set group_code = 2, group_name = 'Объем', general_code = 39, general_name = 'литр' where external_id = 77;
+	commit;
+end $$;
